@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: email_scheduler_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-email_scheduler}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-email_scheduler_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-email_scheduler_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-email_scheduler} -d ${POSTGRES_DB:-email_scheduler_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - email_scheduler_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: email_scheduler_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - email_scheduler_net
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  email_scheduler_net:
+    driver: bridge
