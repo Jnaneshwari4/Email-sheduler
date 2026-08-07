@@ -1,6 +1,7 @@
 import type { AuthUser } from "../types/auth";
 import type { JSX } from "react";
 
+
 type DashboardHeaderProps = {
   user: AuthUser;
   onLogout: () => Promise<void>;

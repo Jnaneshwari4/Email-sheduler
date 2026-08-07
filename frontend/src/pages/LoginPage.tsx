@@ -7,21 +7,6 @@ export function LoginPage(): JSX.Element {
   const { isAuthenticated, loginWithToken } = useAuth();
   const gsiInitialized = useRef(false);
 
-  const handleGmailSignIn = (): void => {
-    const googleId = window.google?.accounts?.id;
-    if (!googleId) {
-      toast.error("Google sign-in is not ready yet");
-      return;
-    }
-
-    try {
-      googleId.prompt();
-    } catch (err) {
-      console.warn("Google prompt request failed", err);
-      toast.error("Unable to open Google sign-in. Try again in a moment.");
-    }
-  };
-
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
     if (!clientId || gsiInitialized.current) return;
@@ -90,17 +75,8 @@ export function LoginPage(): JSX.Element {
         <h1 className="text-3xl font-bold tracking-tight text-white">Email Scheduler</h1>
         <p className="mt-2 text-sm text-slate-300">Sign in with your Google OAuth token to access your dashboard.</p>
 
-        <div className="mt-7 space-y-4">
-          <div className="mb-4 flex flex-col items-center gap-4">
-            <div id="google-signin-button" />
-            <button
-              type="button"
-              onClick={handleGmailSignIn}
-              className="w-full max-w-xs rounded-xl bg-slate-800 px-4 py-2.5 font-semibold text-white transition hover:bg-slate-700"
-            >
-              Sign in with Gmail
-            </button>
-          </div>
+        <div className="mt-7 flex justify-center">
+          <div id="google-signin-button" />
         </div>
       </div>
     </main>

@@ -26,8 +26,7 @@ function statusBadge(status: EmailRecord["status"]): string {
       return "bg-emerald-100 text-emerald-700";
     case "FAILED":
       return "bg-rose-100 text-rose-700";
-    case "PROCESSING":
-      return "bg-sky-100 text-sky-700";
+    
     default:
       return "bg-amber-100 text-amber-700";
   }
@@ -96,13 +95,30 @@ export function EmailTable({
                 {onDelete ? (
                   <td className="px-4 py-3">
                     <button
-                      type="button"
-                      onClick={() => onDelete(row.id)}
-                      disabled={deletingId === row.id}
-                      className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
-                    >
-                      {deletingId === row.id ? "Deleting..." : "Delete"}
-                    </button>
+  type="button"
+  onClick={() => onDelete(row.id)}
+  disabled={deletingId === row.id}
+  className="
+    inline-flex
+    items-center
+    justify-center
+    bg-red-500
+    hover:bg-red-600
+    text-white
+    text-xs
+    font-medium
+    px-3
+    py-1.5
+    rounded-lg
+    transition
+    shadow-sm
+    hover:shadow-md
+    disabled:opacity-50
+    disabled:cursor-not-allowed
+  "
+>
+  {deletingId === row.id ? "Canceling..." : "Cancel"}
+</button>
                   </td>
                 ) : null}
               </tr>

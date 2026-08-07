@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type JSX } from "react";
+import { StatsCards } from "../components/StatsCards";import { useEffect, useMemo, useState, type JSX } from "react";
 import toast from "react-hot-toast";
 import { fetchScheduledEmails, fetchSentEmails, deleteScheduledEmail, deleteScheduledEmails } from "../api/emails.api";
 import { ComposeEmailModal } from "../components/ComposeEmailModal";
@@ -8,6 +8,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { useAuth } from "../hooks/useAuth";
 import type { EmailRecord } from "../types/emails";
+
 
 type TabKey = "scheduled" | "sent";
 
@@ -98,12 +99,12 @@ export function DashboardPage(): JSX.Element {
 
   const handleBulkDelete = async (): Promise<void> => {
     if (selectedIds.length === 0) {
-      toast.error("Select at least one scheduled email to delete.");
+      toast.error("Select at least one scheduled email to cancel.");
       return;
     }
 
     const confirmed = window.confirm(
-      `Delete ${selectedIds.length} scheduled email${selectedIds.length > 1 ? "s" : ""}?`
+      `Cancel schedule for ${selectedIds.length} scheduled email${selectedIds.length > 1 ? "s" : ""}?`
     );
 
     if (!confirmed) {
@@ -112,11 +113,11 @@ export function DashboardPage(): JSX.Element {
 
     try {
       await deleteScheduledEmails(selectedIds);
-      toast.success("Selected scheduled emails deleted");
+      toast.success("Selected scheduled schedules canceled");
       setSelectedIds([]);
       await loadData();
     } catch {
-      toast.error("Failed to delete selected scheduled emails");
+      toast.error("Failed to cancel selected scheduled emails");
     }
   };
 
@@ -125,23 +126,52 @@ export function DashboardPage(): JSX.Element {
 
     try {
       await deleteScheduledEmail(emailJobId);
-      toast.success("Scheduled email deleted");
+      toast.success("Scheduled email canceled");
       await loadData();
     } catch {
-      toast.error("Failed to delete scheduled email");
+      toast.error("Failed to cancel scheduled email");
     } finally {
       setDeletingId(null);
     }
   };
+const totalScheduled = scheduledEmails.length;
+
+const totalSent = sentEmails.length;
+
+const totalFailed = sentEmails.filter(
+  (email) => email.status === "FAILED"
+).length;
+
+const successRate =
+  totalSent > 0
+    ? Math.round(
+        ((totalSent - totalFailed) / totalSent) * 100
+      )
+    : 100;
 
   if (!user) {
     return <LoadingState label="Loading profile..." />;
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_20%_15%,#fed7aa_0,#fff7ed_30%,#fff_70%)] px-4 py-6 sm:px-6">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <DashboardHeader user={user} onLogout={logout} />
+  <main className="min-h-screen bg-gradient-to-r from-orange-50 via-white to-orange-100 py-10">
+    <div className="mx-auto max-w-6xl px-4">
+
+      <DashboardHeader
+        user={user}
+        onLogout={logout}
+      />
+
+      <div className="my-6">
+        <StatsCards
+          scheduled={totalScheduled}
+          sent={totalSent}
+          failed={totalFailed}
+          successRate={successRate}
+        />
+      </div>
+
+
 
         <section className="rounded-3xl border border-orange-100 bg-white/80 p-5 shadow-xl shadow-orange-100/60">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -200,15 +230,15 @@ export function DashboardPage(): JSX.Element {
                     <p className="text-sm text-slate-600">
                       {selectedIds.length > 0
                         ? `${selectedIds.length} selected`
-                        : "Select scheduled emails to delete in bulk."}
+                        : "Select scheduled emails to cancel in bulk."}
                     </p>
                     <button
                       type="button"
                       onClick={handleBulkDelete}
                       disabled={selectedIds.length === 0}
-                      className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-200 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2.5 text-sm font-semibold rounded-xl shadow-lg shadow-red-200 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Delete Selected
+                      Cancel Selected
                     </button>
                   </div>
                 ) : null}
