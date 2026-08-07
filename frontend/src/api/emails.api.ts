@@ -19,3 +19,11 @@ export async function fetchSentEmails(): Promise<EmailRecord[]> {
   const response = await http.get<ApiEnvelope<EmailRecord[]>>("/emails/sent");
   return response.data.data;
 }
+
+export async function deleteScheduledEmail(emailJobId: string): Promise<void> {
+  await http.delete(`/emails/scheduled/${emailJobId}`);
+}
+
+export async function deleteScheduledEmails(emailJobIds: string[]): Promise<void> {
+  await http.post("/emails/scheduled/delete", { ids: emailJobIds });
+}

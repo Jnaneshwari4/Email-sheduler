@@ -1,4 +1,4 @@
-import { enqueueEmailDispatchJob } from "../queues/email-dispatch.queue";
+import { enqueueEmailDispatchJob, removeScheduledEmailDispatchJobs } from "../queues/email-dispatch.queue";
 
 export class EmailQueueService {
   async scheduleEmailDispatchJob(input: {
@@ -24,5 +24,9 @@ export class EmailQueueService {
       },
       delayMs
     });
+  }
+
+  async cancelScheduledEmailDispatchJobs(emailJobId: string): Promise<void> {
+    await removeScheduledEmailDispatchJobs(emailJobId);
   }
 }

@@ -11,6 +11,16 @@ export type EmailRecord = {
   createdAt: string;
 };
 
+export type Sender = {
+  id: string;
+  email: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPassEnc: string;
+  createdAt: string;
+};
+
 export type ScheduleEmailPayload = {
   senderId: string;
   subject: string;

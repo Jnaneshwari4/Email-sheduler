@@ -28,7 +28,7 @@ export const emailDispatchQueue = new Queue<EmailDispatchJobData>(QUEUE_NAMES.EM
 });
 
 export function buildEmailDispatchJobId(emailJobId: string): string {
-  return `email-dispatch:${emailJobId}`;
+  return `email-dispatch-${emailJobId}`;
 }
 
 export function buildRescheduledEmailDispatchJobId(
@@ -36,7 +36,7 @@ export function buildRescheduledEmailDispatchJobId(
   scheduledAtEpochMs: number,
   sequence: number
 ): string {
-  return `email-dispatch:${emailJobId}:${scheduledAtEpochMs}:${sequence}`;
+  return `email-dispatch-${emailJobId}-${scheduledAtEpochMs}-${sequence}`;
 }
 
 export async function enqueueEmailDispatchJob(input: {
@@ -48,4 +48,11 @@ export async function enqueueEmailDispatchJob(input: {
     jobId: input.customJobId ?? buildEmailDispatchJobId(input.data.emailJobId),
     delay: Math.max(0, Math.floor(input.delayMs))
   });
+}
+
+export async function removeScheduledEmailDispatchJobs(emailJobId: string): Promise<void> {
+  const jobs = await emailDispatchQueue.getJobs(["delayed", "waiting", "paused"]);
+  const matchingJobs = jobs.filter((job) => job.data.emailJobId === emailJobId);
+
+  await Promise.all(matchingJobs.map((job) => job.remove()));
 }

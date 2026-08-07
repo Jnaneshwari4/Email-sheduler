@@ -69,7 +69,15 @@ const emailDispatchWorker = new Worker<EmailDispatchJobData>(
       };
     }
 
-    await emailDispatchService.dispatch(job.data);
+    const emailJob = await emailJobRepository.findById(job.data.emailJobId);
+    if (!emailJob) {
+      throw new Error("Email job not found");
+    }
+
+    await emailDispatchService.dispatch({
+      ...job.data,
+      senderId: emailJob.senderId
+    });
 
     return {
       outcome: "sent"

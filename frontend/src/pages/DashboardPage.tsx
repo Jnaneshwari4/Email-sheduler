@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type JSX } from "react";
 import toast from "react-hot-toast";
-import { fetchScheduledEmails, fetchSentEmails } from "../api/emails.api";
+import { fetchScheduledEmails, fetchSentEmails, deleteScheduledEmail, deleteScheduledEmails } from "../api/emails.api";
 import { ComposeEmailModal } from "../components/ComposeEmailModal";
 import { DashboardHeader } from "../components/DashboardHeader";
 import { EmailTable } from "../components/EmailTable";
@@ -18,20 +18,39 @@ export function DashboardPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const [scheduledEmails, setScheduledEmails] = useState<EmailRecord[]>([]);
   const [sentEmails, setSentEmails] = useState<EmailRecord[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const loadData = async (): Promise<void> => {
-    setIsLoading(true);
+  const loadData = async (target: TabKey | "both" = "both", silent = false): Promise<void> => {
+    if (!silent) {
+      setIsLoading(true);
+    }
 
     try {
-      const [scheduled, sent] = await Promise.all([fetchScheduledEmails(), fetchSentEmails()]);
-      setScheduledEmails(scheduled);
-      setSentEmails(sent);
+      if (target === "both" || target === "scheduled") {
+        const scheduled = await fetchScheduledEmails();
+        setScheduledEmails(scheduled);
+      }
+
+      if (target === "both" || target === "sent") {
+        const sent = await fetchSentEmails();
+        setSentEmails(sent);
+      }
     } catch {
-      toast.error("Failed to load email data. Check backend API status.");
-      setScheduledEmails([]);
-      setSentEmails([]);
+      if (!silent) {
+        toast.error("Failed to load email data. Check backend API status.");
+      }
+
+      if (target === "both" || target === "scheduled") {
+        setScheduledEmails([]);
+      }
+      if (target === "both" || target === "sent") {
+        setSentEmails([]);
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -39,10 +58,81 @@ export function DashboardPage(): JSX.Element {
     void loadData();
   }, []);
 
+  useEffect(() => {
+    if (activeTab !== "scheduled") {
+      setSelectedIds([]);
+    }
+
+    void loadData(activeTab, true);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void loadData(activeTab, true);
+    }, 15000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [activeTab]);
+
   const activeRows = useMemo(
     () => (activeTab === "scheduled" ? scheduledEmails : sentEmails),
     [activeTab, scheduledEmails, sentEmails]
   );
+
+  const handleToggleRow = (emailJobId: string, selected: boolean): void => {
+    setSelectedIds((current) =>
+      selected ? [...current, emailJobId] : current.filter((id) => id !== emailJobId)
+    );
+  };
+
+  const handleToggleSelectAll = (selected: boolean): void => {
+    if (selected) {
+      setSelectedIds(scheduledEmails.map((email) => email.id));
+      return;
+    }
+
+    setSelectedIds([]);
+  };
+
+  const handleBulkDelete = async (): Promise<void> => {
+    if (selectedIds.length === 0) {
+      toast.error("Select at least one scheduled email to delete.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${selectedIds.length} scheduled email${selectedIds.length > 1 ? "s" : ""}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteScheduledEmails(selectedIds);
+      toast.success("Selected scheduled emails deleted");
+      setSelectedIds([]);
+      await loadData();
+    } catch {
+      toast.error("Failed to delete selected scheduled emails");
+    }
+  };
+
+  const handleDelete = async (emailJobId: string): Promise<void> => {
+    setDeletingId(emailJobId);
+
+    try {
+      await deleteScheduledEmail(emailJobId);
+      toast.success("Scheduled email deleted");
+      await loadData();
+    } catch {
+      toast.error("Failed to delete scheduled email");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (!user) {
     return <LoadingState label="Loading profile..." />;
@@ -104,7 +194,36 @@ export function DashboardPage(): JSX.Element {
                 }
               />
             ) : (
-              <EmailTable rows={activeRows} showSentAt={activeTab === "sent"} />
+              <>
+                {activeTab === "scheduled" ? (
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-slate-600">
+                      {selectedIds.length > 0
+                        ? `${selectedIds.length} selected`
+                        : "Select scheduled emails to delete in bulk."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleBulkDelete}
+                      disabled={selectedIds.length === 0}
+                      className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-200 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Delete Selected
+                    </button>
+                  </div>
+                ) : null}
+
+                <EmailTable
+                  rows={activeRows}
+                  showSentAt={activeTab === "sent"}
+                  selectable={activeTab === "scheduled"}
+                  selectedIds={activeTab === "scheduled" ? selectedIds : []}
+                  onToggleRow={handleToggleRow}
+                  onToggleSelectAll={handleToggleSelectAll}
+                  onDelete={activeTab === "scheduled" ? handleDelete : undefined}
+                  deletingId={deletingId}
+                />
+              </>
             )}
           </div>
         </section>

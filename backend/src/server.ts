@@ -3,15 +3,23 @@ import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { redisConnection } from "./config/redis";
 import { emailDispatchQueue } from "./queues/email-dispatch.queue";
+import { ensureDefaultSender } from "./services/sender-initializer.service";
 
 const PORT = env.PORT;
+let server: import("http").Server | undefined;
 
-const server = app.listen(PORT, () => {
-  logger.info("Backend server started", {
-    port: PORT,
-    nodeEnv: env.NODE_ENV
+async function startServer(): Promise<void> {
+  await ensureDefaultSender();
+
+  server = app.listen(PORT, () => {
+    logger.info("Backend server started", {
+      port: PORT,
+      nodeEnv: env.NODE_ENV
+    });
   });
-});
+}
+
+void startServer();
 
 let shuttingDown = false;
 
@@ -22,6 +30,12 @@ async function shutdown(signal: string): Promise<void> {
 
   shuttingDown = true;
   logger.info("Received shutdown signal", { signal });
+
+  if (!server) {
+    logger.warn("Shutdown requested before server was started");
+    process.exit(0);
+    return;
+  }
 
   server.close(async () => {
     try {

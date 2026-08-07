@@ -1,8 +1,10 @@
-import { useMemo, useState, type ChangeEvent, type JSX } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type JSX } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { scheduleEmails } from "../api/emails.api";
+import { fetchSenders } from "../api/senders.api";
 import { parseEmailCsv } from "../utils/csv";
+import type { Sender } from "../types/emails";
 
 type ComposeEmailModalProps = {
   isOpen: boolean;
@@ -24,6 +26,7 @@ export function ComposeEmailModal({
   onClose,
   onScheduled
 }: ComposeEmailModalProps): JSX.Element | null {
+  const [senders, setSenders] = useState<Sender[]>([]);
   const [validEmails, setValidEmails] = useState<string[]>([]);
   const [invalidEmails, setInvalidEmails] = useState<string[]>([]);
   const [isCsvParsing, setIsCsvParsing] = useState(false);
@@ -32,6 +35,7 @@ export function ComposeEmailModal({
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<ComposeFormValues>({
     defaultValues: {
@@ -47,6 +51,25 @@ export function ComposeEmailModal({
   const hasEmails = validEmails.length > 0;
 
   const invalidPreview = useMemo(() => invalidEmails.slice(0, 5), [invalidEmails]);
+
+  useEffect(() => {
+    const loadSenders = async (): Promise<void> => {
+      try {
+        const items = await fetchSenders();
+        setSenders(items);
+
+        if (items.length > 0) {
+          setValue("senderId", items[0].id);
+        }
+      } catch {
+        toast.error("Failed to load sender list. Create a sender first.");
+      }
+    };
+
+    if (isOpen) {
+      void loadSenders();
+    }
+  }, [isOpen, setValue]);
 
   const handleCsvChange = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.target.files?.[0];
@@ -81,22 +104,30 @@ export function ComposeEmailModal({
       return;
     }
 
-    await scheduleEmails({
-      senderId: values.senderId,
-      subject: values.subject,
-      body: values.body,
-      recipients: validEmails,
-      startTime: values.startTime,
-      delaySeconds: values.delaySeconds,
-      hourlyLimit: values.hourlyLimit
-    });
+    try {
+      await scheduleEmails({
+        senderId: values.senderId,
+        subject: values.subject,
+        body: values.body,
+        recipients: validEmails,
+        startTime: values.startTime,
+        delaySeconds: values.delaySeconds,
+        hourlyLimit: values.hourlyLimit
+      });
 
-    toast.success("Email campaign scheduled");
-    await onScheduled();
-    reset();
-    setValidEmails([]);
-    setInvalidEmails([]);
-    onClose();
+      toast.success("Email campaign scheduled successfully");
+      await onScheduled();
+      reset();
+      setValidEmails([]);
+      setInvalidEmails([]);
+      onClose();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to schedule email campaign. Please try again.";
+      toast.error(message);
+    }
   };
 
   if (!isOpen) {
@@ -119,12 +150,21 @@ export function ComposeEmailModal({
 
         <form className="space-y-4" onSubmit={handleSubmit(submit)}>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Sender ID</label>
-            <input
-              type="text"
+            <label className="mb-1 block text-sm font-medium text-slate-700">Sender</label>
+            <select
               className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none ring-orange-300 focus:ring"
-              {...register("senderId", { required: "Sender ID is required" })}
-            />
+              {...register("senderId", { required: "Sender is required" })}
+            >
+              {senders.length === 0 ? (
+                <option value="">No senders available</option>
+              ) : (
+                senders.map((sender) => (
+                  <option key={sender.id} value={sender.id}>
+                    {sender.email}
+                  </option>
+                ))
+              )}
+            </select>
             {errors.senderId ? <p className="mt-1 text-xs text-rose-600">{errors.senderId.message}</p> : null}
           </div>
 
