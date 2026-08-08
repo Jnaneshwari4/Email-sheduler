@@ -110,7 +110,7 @@ export function ComposeEmailModal({
         subject: values.subject,
         body: values.body,
         recipients: validEmails,
-        startTime: values.startTime,
+        startTime: new Date(values.startTime).toISOString(),
         delaySeconds: values.delaySeconds,
         hourlyLimit: values.hourlyLimit
       });
