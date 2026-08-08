@@ -1,4 +1,4 @@
-import nodemailer, { type Transporter } from "nodemailer";
+import { Resend } from "resend";
 import { env } from "../config/env";
 import { SenderRepository } from "../repositories/sender.repository";
 import { AppError } from "../utils/app-error";
@@ -16,7 +16,11 @@ type SendEmailResult = {
 };
 
 export class MailerService {
-  constructor(private readonly senderRepository: SenderRepository) {}
+  private readonly resend: Resend;
+
+  constructor(private readonly senderRepository: SenderRepository) {
+    this.resend = new Resend(env.RESEND_API_KEY);
+  }
 
   async sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
     const sender = await this.senderRepository.findById(input.senderId);
@@ -25,44 +29,25 @@ export class MailerService {
       throw new AppError("Sender not found", 404);
     }
 
-    const transporter = this.createTransporter(sender);
-
-    const info = await transporter.sendMail({
-      from: sender.email,
-      to: input.recipient,
+    const { data, error } = await this.resend.emails.send({
+      from: "Email Scheduler <onboarding@resend.dev>",
+      to: [input.recipient],
       subject: input.subject,
       text: input.body,
-      html: `<pre style=\"font-family:inherit\">${this.escapeHtml(input.body)}</pre>`
+      html: `<pre style="font-family:inherit">${this.escapeHtml(input.body)}</pre>`
     });
 
-    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (error) {
+      throw new AppError(`Email sending failed: ${error.message}`, 502);
+    }
+
+    if (!data?.id) {
+      throw new AppError("Email provider did not return a message ID", 502);
+    }
 
     return {
-      messageId: info.messageId,
-      previewUrl: previewUrl || undefined
+      messageId: data.id
     };
-  }
-
-  private createTransporter(sender: {
-    smtpHost: string;
-    smtpPort: number;
-    smtpUser: string;
-    smtpPassEnc: string;
-  }): Transporter {
-    const host = sender.smtpHost || env.SMTP_HOST;
-    const port = sender.smtpPort || env.SMTP_PORT;
-    const user = sender.smtpUser || env.SMTP_USER;
-    const pass = sender.smtpPassEnc || env.SMTP_PASS;
-
-    return nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: {
-        user,
-        pass
-      }
-    });
   }
 
   private escapeHtml(value: string): string {

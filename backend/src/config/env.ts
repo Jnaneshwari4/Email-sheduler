@@ -18,6 +18,7 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive(),
   SMTP_USER: z.string().min(1),
   SMTP_PASS: z.string().min(1),
+  RESEND_API_KEY: z.string().min(1),
   WORKER_CONCURRENCY: z.coerce.number().int().positive(),
   MAX_EMAILS_PER_HOUR: z.coerce.number().int().positive(),
   MIN_DELAY_SECONDS: z.coerce.number().int().positive()
