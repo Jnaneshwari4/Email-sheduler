@@ -7,8 +7,11 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1),
-  REDIS_HOST: z.string().min(1),
+
+ REDIS_HOST: z.string().min(1),
   REDIS_PORT: z.coerce.number().int().positive(),
+  REDIS_PASSWORD: z.string().min(1),
+
   JWT_SECRET: z.string().min(1),
   GOOGLE_CLIENT_ID: z.string().min(1),
   SMTP_HOST: z.string().min(1),

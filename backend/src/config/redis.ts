@@ -4,6 +4,8 @@ import { env } from "./env";
 const redisOptions: RedisOptions = {
   host: env.REDIS_HOST,
   port: env.REDIS_PORT,
+  password: env.REDIS_PASSWORD,
+  tls: {},
   maxRetriesPerRequest: null,
   enableReadyCheck: true
 };

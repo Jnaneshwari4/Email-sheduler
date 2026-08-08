@@ -50,9 +50,14 @@ export async function enqueueEmailDispatchJob(input: {
   });
 }
 
-export async function removeScheduledEmailDispatchJobs(emailJobId: string): Promise<void> {
-  const jobs = await emailDispatchQueue.getJobs(["delayed", "waiting", "paused"]);
-  const matchingJobs = jobs.filter((job) => job.data.emailJobId === emailJobId);
+export async function removeScheduledEmailDispatchJobs(
+  emailJobId: string
+): Promise<void> {
+  const jobId = buildEmailDispatchJobId(emailJobId);
 
-  await Promise.all(matchingJobs.map((job) => job.remove()));
+  const job = await emailDispatchQueue.getJob(jobId);
+
+  if (job) {
+    await job.remove();
+  }
 }
