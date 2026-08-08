@@ -7,64 +7,60 @@ export function LoginPage(): JSX.Element {
   const { isAuthenticated, loginWithToken } = useAuth();
   const gsiInitialized = useRef(false);
 
- useEffect(() => {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+    if (!clientId || gsiInitialized.current) return;
 
-  if (!clientId || gsiInitialized.current) return;
-
-  const initializeGoogle = () => {
     const googleAccountsId = window.google?.accounts?.id;
+    if (!googleAccountsId) return;
 
-    if (!googleAccountsId || gsiInitialized.current) return;
+    try {
+      googleAccountsId.initialize({
+        client_id: clientId,
+        callback: async (response: any) => {
+          const credential = response?.credential;
+          if (!credential) return;
 
-    googleAccountsId.initialize({
-      client_id: clientId,
-      callback: async (response: any) => {
-        const credential = response?.credential;
+          // Basic JWT shape check
+          if (typeof credential !== "string" || credential.split('.').length !== 3) {
+            toast.error("Received invalid credential from Google");
+            console.warn("Invalid credential from Google callback:", credential);
+            return;
+          }
 
-        if (!credential) return;
+          // Decode JWT payload to inspect audience
+          try {
+            const payloadJson = atob(credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'));
+            const payload = JSON.parse(decodeURIComponent(escape(payloadJson)));
+            console.info("Google ID token payload:", payload);
 
-        if (
-          typeof credential !== "string" ||
-          credential.split(".").length !== 3
-        ) {
-          toast.error("Received invalid credential from Google");
-          return;
+            if (payload.aud !== clientId) {
+              toast.error("Received ID token audience does not match app client ID. Check your OAuth client configuration.");
+              console.warn("Audience mismatch", { tokenAud: payload.aud, clientId });
+              return;
+            }
+          } catch (err) {
+            console.warn("Failed to decode Google ID token payload", err);
+          }
+
+          try {
+            await loginWithToken(credential);
+          } catch {
+            toast.error("Google sign-in failed");
+          }
         }
-
-        try {
-          await loginWithToken(credential);
-        } catch {
-          toast.error("Google sign-in failed");
-        }
-      },
-    });
-
-    const button = document.getElementById("google-signin-button");
-
-    if (button) {
-      googleAccountsId.renderButton(button, {
-        theme: "outline",
-        size: "large",
       });
+
+      googleAccountsId.renderButton(
+        document.getElementById("google-signin-button"),
+        { theme: "outline", size: "large" }
+      );
+
+      gsiInitialized.current = true;
+    } catch (err) {
+      // Ignore if script not ready yet
     }
-
-    gsiInitialized.current = true;
-  };
-
-  if (window.google?.accounts?.id) {
-    initializeGoogle();
-  } else {
-    const timer = window.setInterval(() => {
-      if (window.google?.accounts?.id) {
-        initializeGoogle();
-        window.clearInterval(timer);
-      }
-    }, 100);
-
-    return () => window.clearInterval(timer);
-  }
-}, [loginWithToken]);
+  }, [loginWithToken]);
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
