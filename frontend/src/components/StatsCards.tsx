@@ -4,6 +4,7 @@ type StatsCardsProps = {
   scheduled: number;
   sent: number;
   failed: number;
+  successRate: number;
 };
 
 type CardProps = {
@@ -28,7 +29,8 @@ function Card({ title, value, bg, text }: CardProps): JSX.Element {
 export function StatsCards({
   scheduled,
   sent,
-  failed
+  failed,
+   successRate
 }: StatsCardsProps): JSX.Element {
   return (
     <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -45,9 +47,12 @@ export function StatsCards({
         bg="bg-emerald-50"
         text="text-emerald-700"
       />
-
-      
-
+<Card
+  title="Success Rate"
+  value={successRate}
+  bg="bg-blue-50"
+  text="text-blue-700"
+/>
       <Card
         title="Failed"
         value={failed}
