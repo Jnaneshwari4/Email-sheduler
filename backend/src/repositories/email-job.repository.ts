@@ -36,6 +36,29 @@ export class EmailJobRepository {
     });
   }
 
+  async deleteManyByUserAndStatus(userId: string, status: EmailJobStatus): Promise<number> {
+    const result = await prisma.emailJob.deleteMany({
+      where: {
+        userId,
+        status
+      }
+    });
+
+    return result.count;
+  }
+
+  async deleteByIdAndUser(emailJobId: string, userId: string, status: EmailJobStatus): Promise<number> {
+    const result = await prisma.emailJob.deleteMany({
+      where: {
+        id: emailJobId,
+        userId,
+        status
+      }
+    });
+
+    return result.count;
+  }
+
   async markProcessing(emailJobId: string): Promise<void> {
     await prisma.emailJob.update({
       where: { id: emailJobId },

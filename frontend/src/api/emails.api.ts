@@ -27,3 +27,7 @@ export async function deleteScheduledEmail(emailJobId: string): Promise<void> {
 export async function deleteScheduledEmails(emailJobIds: string[]): Promise<void> {
   await http.post("/emails/scheduled/delete", { ids: emailJobIds });
 }
+
+export async function deleteSentEmails(): Promise<void> {
+  await http.post("/emails/sent/delete", {});
+}

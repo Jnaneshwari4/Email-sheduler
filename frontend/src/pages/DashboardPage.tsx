@@ -1,6 +1,6 @@
 import { StatsCards } from "../components/StatsCards";import { useEffect, useMemo, useState, type JSX } from "react";
 import toast from "react-hot-toast";
-import { fetchScheduledEmails, fetchSentEmails, deleteScheduledEmail, deleteScheduledEmails } from "../api/emails.api";
+import { fetchScheduledEmails, fetchSentEmails, deleteScheduledEmail, deleteScheduledEmails, deleteSentEmails } from "../api/emails.api";
 import { ComposeEmailModal } from "../components/ComposeEmailModal";
 import { DashboardHeader } from "../components/DashboardHeader";
 import { EmailTable } from "../components/EmailTable";
@@ -121,6 +121,27 @@ export function DashboardPage(): JSX.Element {
     }
   };
 
+  const handleClearSentEmails = async (): Promise<void> => {
+    if (sentEmails.length === 0) {
+      toast.error("There are no sent emails to clear.");
+      return;
+    }
+
+    const confirmed = window.confirm("Clear all sent email history?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteSentEmails();
+      toast.success("Sent email history cleared");
+      await loadData("sent");
+    } catch {
+      toast.error("Failed to clear sent email history");
+    }
+  };
+
   const handleDelete = async (emailJobId: string): Promise<void> => {
     setDeletingId(emailJobId);
 
@@ -200,15 +221,26 @@ const successRate =
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setComposeOpen(true);
-              }}
-              className="rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:brightness-110"
-            >
-              Compose Email
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {activeTab === "sent" ? (
+                <button
+                  type="button"
+                  onClick={handleClearSentEmails}
+                  className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+                >
+                  Clear Sent Emails
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  setComposeOpen(true);
+                }}
+                className="rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:brightness-110"
+              >
+                Compose Email
+              </button>
+            </div>
           </div>
 
           <div className="mt-5">

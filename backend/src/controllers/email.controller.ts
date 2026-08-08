@@ -168,3 +168,38 @@ export async function deleteScheduledEmails(req: Request, res: Response): Promis
     }
   });
 }
+
+export async function deleteSentEmail(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError("Unauthorized", 401);
+  }
+
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const deletedCount = await emailJobRepository.deleteByIdAndUser(id, req.user.id, EmailJobStatus.SENT);
+
+  if (deletedCount === 0) {
+    throw new AppError("Sent email not found", 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      deletedCount
+    }
+  });
+}
+
+export async function deleteSentEmails(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError("Unauthorized", 401);
+  }
+
+  const deletedCount = await emailJobRepository.deleteManyByUserAndStatus(req.user.id, EmailJobStatus.SENT);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      deletedCount
+    }
+  });
+}
