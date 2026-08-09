@@ -2,17 +2,34 @@ import { type EmailJob, EmailJobStatus } from "@prisma/client";
 import { prisma } from "../config/prisma";
 
 export class EmailJobRepository {
-  async create(input: Omit<EmailJob, "sentAt" | "updatedAt">): Promise<void> {
+  async create(
+    input: Omit<EmailJob, "sentAt" | "updatedAt">
+  ): Promise<void> {
     await prisma.emailJob.create({
       data: input
     });
   }
 
-  async findByUserAndStatus(userId: string, status: EmailJobStatus): Promise<EmailJob[]> {
+  async findByUserAndStatus(
+    userId: string,
+    status: EmailJobStatus
+  ): Promise<EmailJob[]> {
     return prisma.emailJob.findMany({
       where: {
         userId,
         status
+      },
+      orderBy: {
+        scheduledAt: "asc"
+      }
+    });
+  }
+
+  // Used by worker startup recovery.
+  async findAllScheduled(): Promise<EmailJob[]> {
+    return prisma.emailJob.findMany({
+      where: {
+        status: EmailJobStatus.SCHEDULED
       },
       orderBy: {
         scheduledAt: "asc"
@@ -36,7 +53,10 @@ export class EmailJobRepository {
     });
   }
 
-  async deleteManyByUserAndStatus(userId: string, status: EmailJobStatus): Promise<number> {
+  async deleteManyByUserAndStatus(
+    userId: string,
+    status: EmailJobStatus
+  ): Promise<number> {
     const result = await prisma.emailJob.deleteMany({
       where: {
         userId,
@@ -47,7 +67,11 @@ export class EmailJobRepository {
     return result.count;
   }
 
-  async deleteByIdAndUser(emailJobId: string, userId: string, status: EmailJobStatus): Promise<number> {
+  async deleteByIdAndUser(
+    emailJobId: string,
+    userId: string,
+    status: EmailJobStatus
+  ): Promise<number> {
     const result = await prisma.emailJob.deleteMany({
       where: {
         id: emailJobId,
@@ -61,7 +85,9 @@ export class EmailJobRepository {
 
   async markProcessing(emailJobId: string): Promise<void> {
     await prisma.emailJob.update({
-      where: { id: emailJobId },
+      where: {
+        id: emailJobId
+      },
       data: {
         status: EmailJobStatus.PROCESSING
       }
@@ -70,7 +96,9 @@ export class EmailJobRepository {
 
   async markSent(emailJobId: string): Promise<void> {
     await prisma.emailJob.update({
-      where: { id: emailJobId },
+      where: {
+        id: emailJobId
+      },
       data: {
         status: EmailJobStatus.SENT,
         sentAt: new Date()
@@ -80,16 +108,23 @@ export class EmailJobRepository {
 
   async markFailed(emailJobId: string): Promise<void> {
     await prisma.emailJob.update({
-      where: { id: emailJobId },
+      where: {
+        id: emailJobId
+      },
       data: {
         status: EmailJobStatus.FAILED
       }
     });
   }
 
-  async markScheduled(emailJobId: string, scheduledAt: Date): Promise<void> {
+  async markScheduled(
+    emailJobId: string,
+    scheduledAt: Date
+  ): Promise<void> {
     await prisma.emailJob.update({
-      where: { id: emailJobId },
+      where: {
+        id: emailJobId
+      },
       data: {
         status: EmailJobStatus.SCHEDULED,
         scheduledAt

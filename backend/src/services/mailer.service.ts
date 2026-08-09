@@ -1,4 +1,4 @@
-import { Resend } from "resend";
+import { BrevoClient } from "@getbrevo/brevo";
 import { env } from "../config/env";
 import { SenderRepository } from "../repositories/sender.repository";
 import { AppError } from "../utils/app-error";
@@ -12,14 +12,15 @@ type SendEmailInput = {
 
 type SendEmailResult = {
   messageId: string;
-  previewUrl?: string;
 };
 
 export class MailerService {
-  private readonly resend: Resend;
+  private readonly brevo: BrevoClient;
 
   constructor(private readonly senderRepository: SenderRepository) {
-    this.resend = new Resend(env.RESEND_API_KEY);
+    this.brevo = new BrevoClient({
+      apiKey: env.BREVO_API_KEY
+    });
   }
 
   async sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
@@ -29,25 +30,44 @@ export class MailerService {
       throw new AppError("Sender not found", 404);
     }
 
-    const { data, error } = await this.resend.emails.send({
-      from: "Email Scheduler <onboarding@resend.dev>",
-      to: [input.recipient],
-      subject: input.subject,
-      text: input.body,
-      html: `<pre style="font-family:inherit">${this.escapeHtml(input.body)}</pre>`
-    });
+    try {
+      const result = await this.brevo.transactionalEmails.sendTransacEmail({
+        sender: {
+          name: env.BREVO_SENDER_NAME,
+          email: env.BREVO_SENDER_EMAIL
+        },
+        to: [
+          {
+            email: input.recipient
+          }
+        ],
+        subject: input.subject,
+        textContent: input.body,
+        htmlContent: `<pre style="font-family:inherit">${this.escapeHtml(
+          input.body
+        )}</pre>`
+      });
 
-    if (error) {
-      throw new AppError(`Email sending failed: ${error.message}`, 502);
+      if (!result?.messageId) {
+        throw new AppError(
+          "Email provider did not return a message ID",
+          502
+        );
+      }
+
+      return {
+        messageId: result.messageId
+      };
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      const message =
+        error instanceof Error ? error.message : "Unknown email provider error";
+
+      throw new AppError(`Email sending failed: ${message}`, 502);
     }
-
-    if (!data?.id) {
-      throw new AppError("Email provider did not return a message ID", 502);
-    }
-
-    return {
-      messageId: data.id
-    };
   }
 
   private escapeHtml(value: string): string {

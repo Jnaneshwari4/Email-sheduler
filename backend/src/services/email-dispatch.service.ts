@@ -14,11 +14,10 @@ export class EmailDispatchService {
       body: job.body
     });
 
-    logger.info("Email sent successfully", {
-      emailJobId: job.emailJobId,
-      recipient: job.recipient,
-      messageId: result.messageId,
-      previewUrl: result.previewUrl
-    });
+  logger.info("Email sent successfully", {
+  emailJobId: job.emailJobId,
+  recipient: job.recipient,
+  messageId: result.messageId
+});
   }
 }

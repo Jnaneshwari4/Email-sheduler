@@ -16,6 +16,7 @@
     "prisma:deploy": "prisma migrate deploy"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^6.0.2",
     "@prisma/client": "^6.12.0",
     "bullmq": "^5.58.0",
     "cors": "^2.8.5",
