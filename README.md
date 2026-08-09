@@ -130,6 +130,10 @@ Open the Vite URL shown in the terminal, usually `http://localhost:5173`.
 - The frontend uses `http://localhost:4000/api/v1` by default.
 - The worker uses Redis to store delayed and retryable jobs.
 
+  ## 🔗 Live Demo
+
+https://serene-charisma-production-5e91.up.railway.app/login
+
 ## Stop Docker
 
 ```powershell
